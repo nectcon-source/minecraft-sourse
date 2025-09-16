@@ -1,0 +1,26 @@
+//
+// Source code recreated from a .class file by IntelliJ IDEA
+// (powered by FernFlower decompiler)
+//
+
+package net.minecraft.client.renderer.entity;
+
+import net.minecraft.client.model.HoglinModel;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.monster.hoglin.Hoglin;
+
+public class HoglinRenderer extends MobRenderer<Hoglin, HoglinModel<Hoglin>> {
+   private static final ResourceLocation HOGLIN_LOCATION = new ResourceLocation("textures/entity/hoglin/hoglin.png");
+
+   public HoglinRenderer(EntityRenderDispatcher var1) {
+      super(var1, new HoglinModel(), 0.7F);
+   }
+
+   public ResourceLocation getTextureLocation(Hoglin var1) {
+      return HOGLIN_LOCATION;
+   }
+
+   protected boolean isShaking(Hoglin var1) {
+      return var1.isConverting();
+   }
+}

@@ -1,0 +1,52 @@
+//
+// Source code recreated from a .class file by IntelliJ IDEA
+// (powered by FernFlower decompiler)
+//
+
+package net.minecraft.network.protocol.login;
+
+import com.mojang.authlib.GameProfile;
+import java.io.IOException;
+import java.util.UUID;
+import net.minecraft.core.SerializableUUID;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.Packet;
+
+public class ClientboundGameProfilePacket implements Packet<ClientLoginPacketListener> {
+   private GameProfile gameProfile;
+
+   public ClientboundGameProfilePacket() {
+   }
+
+   public ClientboundGameProfilePacket(GameProfile var1) {
+      this.gameProfile = var1;
+   }
+
+   public void read(FriendlyByteBuf var1) throws IOException {
+      int[] var2 = new int[4];
+
+      for(int var3 = 0; var3 < var2.length; ++var3) {
+         var2[var3] = var1.readInt();
+      }
+
+      UUID var5 = SerializableUUID.uuidFromIntArray(var2);
+      String var4 = var1.readUtf(16);
+      this.gameProfile = new GameProfile(var5, var4);
+   }
+
+   public void write(FriendlyByteBuf var1) throws IOException {
+      for(int var5 : SerializableUUID.uuidToIntArray(this.gameProfile.getId())) {
+         var1.writeInt(var5);
+      }
+
+      var1.writeUtf(this.gameProfile.getName());
+   }
+
+   public void handle(ClientLoginPacketListener var1) {
+      var1.handleGameProfile(this);
+   }
+
+   public GameProfile getGameProfile() {
+      return this.gameProfile;
+   }
+}

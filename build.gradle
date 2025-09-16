@@ -1,0 +1,238 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+apply plugin: 'eclipse'
+
+
+configurations {
+    shade
+}
+
+group = 'net.minecraft.client.main'
+version = '1.16.5'
+
+
+import org.gradle.internal.os.OperatingSystem
+
+project.ext.lwjglVersion = "3.2.2"
+
+switch (OperatingSystem.current()) {
+    case OperatingSystem.LINUX:
+        project.ext.lwjglNatives = "natives-linux"
+        def osArch = System.getProperty("os.arch")
+        if (osArch.startsWith("arm") || osArch.startsWith("aarch64")) {
+            project.ext.lwjglNatives += osArch.contains("64") || osArch.startsWith("armv8") ? "-arm64" : "-arm32"
+        } else if  (osArch.startsWith("ppc")) {
+            project.ext.lwjglNatives += "-ppc64le"
+        } else if  (osArch.startsWith("riscv")) {
+            project.ext.lwjglNatives += "-riscv64"
+        }
+        break
+    case OperatingSystem.MAC_OS:
+        project.ext.lwjglNatives = "natives-macos"
+        break
+    case OperatingSystem.WINDOWS:
+        project.ext.lwjglNatives = "natives-windows"
+        break
+}
+
+repositories {
+    mavenCentral()
+
+}
+
+dependencies {
+
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+
+    implementation "org.lwjgl:lwjgl:$lwjglVersion"
+    implementation "org.lwjgl:lwjgl-assimp:$lwjglVersion"
+    implementation "org.lwjgl:lwjgl-glfw:$lwjglVersion"
+    implementation "org.lwjgl:lwjgl-openal:$lwjglVersion"
+    implementation "org.lwjgl:lwjgl-opengl:$lwjglVersion"
+    implementation "org.lwjgl:lwjgl-stb:$lwjglVersion"
+    implementation "org.lwjgl:lwjgl-tinyfd:$lwjglVersion"
+    runtimeOnly "org.lwjgl:lwjgl:$lwjglVersion:$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-assimp:$lwjglVersion:$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-glfw:$lwjglVersion:$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-openal:$lwjglVersion:$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-opengl:$lwjglVersion:$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-stb:$lwjglVersion:$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-tinyfd:$lwjglVersion:$lwjglNatives"
+
+
+    // Apache Commons
+    implementation 'org.apache.commons:commons-lang3:3.5'
+    implementation 'commons-io:commons-io:2.5'
+    implementation 'commons-codec:commons-codec:1.10'
+    implementation 'commons-logging:commons-logging:1.1.3'
+    implementation 'org.apache.commons:commons-compress:1.8.1'
+
+    // HTTP-клиенты
+    implementation 'org.apache.httpcomponents:httpclient:4.3.3'
+    implementation 'org.apache.httpcomponents:httpcore:4.3.2'
+
+    // Логирование
+    implementation 'org.apache.logging.log4j:log4j-api:2.16.0'
+    implementation 'org.apache.logging.log4j:log4j-core:2.16.0'
+
+    // Сериализация
+    implementation 'com.google.code.gson:gson:2.8.0'
+    implementation 'com.google.guava:guava:21.0'
+
+    // Сетевые библиотеки
+    implementation 'io.netty:netty-all:4.1.25.Final'
+
+    // Утилиты
+    implementation 'net.sf.jopt-simple:jopt-simple:5.0.3'
+    implementation 'it.unimi.dsi:fastutil:8.2.1'
+
+
+    // Нативные вызовы
+    implementation 'net.java.dev.jna:jna:4.4.0'
+    implementation 'ca.weblite:java-objc-bridge:1.0.0'
+
+    // ICU (Unicode)
+    implementation 'com.ibm.icu:icu4j:66.1'
+}
+
+
+sourceSets {
+    main {
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+}
+
+tasks.withType(JavaCompile) {
+    // Снимаем ограничение на количество ошибок (по умолчанию 100)
+    options.compilerArgs += ["-Xmaxerrs", "280000"]
+
+    // Также можно снять ограничение для предупреждений
+    options.compilerArgs += ["-Xmaxwarns", "10000"]
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+}
+
+
+jar {
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes(
+                'Implementation-Title': 'Minecraft',
+                'Implementation-Version': version,
+                'Main-Class': 'net.minecraft.client.main.Main'
+        )
+    }
+    // Включение всех файлов из папки resources
+    from('src/main/resources') {
+        include '**/*' // Включает все файлы и папки
+    }
+}
+
+application {
+    // Укажите основной класс вашего приложения
+    mainClassName = 'net.minecraft.client.main.Main'
+}
+
+tasks.register('runClient', JavaExec) {
+    group = "Minecraft"
+    description = "Запуск клиент"
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+    if (System.getProperty("os.name").toLowerCase().contains("mac")) {
+        jvmArgs '-XstartOnFirstThread'
+    }
+            args '--gameDir', "${projectDir}/client/client",
+            '--version', version,
+            '--assetsDir', "${projectDir}/client/assets",
+//            '--assetsDir', "/mnt/sdb2/projects/java/zombiemod-launch/1.16.5/client/client/assets",
+            '--assetIndex', "1.16",
+            '--accessToken', '0',
+            '--userProperties', '{}'
+    classpath = sourceSets.main.runtimeClasspath // Убедитесь, что это правильно
+    workingDir = 'client'
+    main = 'net.minecraft.client.main.Main'
+}
+// Добавьте в конец build.gradle:
+task downloadNatives {
+    doLast {
+        configurations.runtimeClasspath.each {
+            if (it.name.endsWith('natives.jar')) {
+                copy {
+                    from zipTree(it)
+                    into "${projectDir}/natives"
+                }
+            }
+        }
+    }
+}
+
+runClient.dependsOn downloadNatives
+tasks.register('runServer', JavaExec) {
+    group = "Minecraft"
+    description = "Запускает сервер Minecraft"
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+    // Укажите основной класс для сервера
+    main = 'net.minecraft.server.Main' // Замените на правильный основной класс для сервера
+
+    // Укажите путь к классам
+    classpath = sourceSets.main.runtimeClasspath
+
+    // Укажите аргументы, если нужно
+    args = [
+            'nogui' // Обычно сервер запускается с этой опцией
+    ]
+
+    // Установите рабочую директорию
+    workingDir = 'server' // Убедитесь, что это правильная директория для вашего сервера
+//    standardInput = System.in
+}
+
+
+tasks.register('copyAssets1') {
+    group = "Minecraft"
+    description = "Скачивает и помещает ресурсы в папку run"
+    dependsOn ':downloadAssets' // Ensure this task exists
+    doLast {
+        mkdir 'run/assets'
+        copy {
+            from downloadAssets.output.path // Ensure this path is valid
+            into 'run/assets'
+        }
+    }
+}
+tasks.withType(JavaCompile) {
+//    options.compilerArgs += ["-Xlint:unchecked", "-Xlint:deprecation"]
+    options.encoding = 'UTF-8'
+    options.fork = true
+    options.forkOptions.jvmArgs += ['-Xmx4g'] // Больше памяти для компилятора
+    options.compilerArgs += ["-Xlint:unchecked", "-Xlint:deprecation"]
+}
+
+// Задача для сборки проекта
+task buildJar(type: Jar) {
+    group = "Build"
+    description = "Собирает JAR-файл проекта"
+    baseName = "${project.name}-${version}" // Используйте baseName вместо archiveBaseName
+    version = project.version // Убедитесь, что версия установлена
+}
+
+// Логирование (если нужно)
+gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.hasTask(':buildJar')) {
+        println "Сборка проекта начата..."
+    }
+
+}
